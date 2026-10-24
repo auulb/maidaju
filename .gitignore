@@ -1,0 +1,21 @@
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# secrets and local configuration
+.env
+.env.*
+!.env.example
+
+# dependencies and generated output
+node_modules/
+dist/
+coverage/
+
+# local browser/tool artifacts
+.playwright-mcp/
+*.log
+
+# local source documents containing credentials
+麦当劳 MCP.md
