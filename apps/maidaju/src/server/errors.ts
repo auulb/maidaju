@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomUUID } from "@/lib/ids";
 import type { ErrorCode } from "@/contracts";
 
 const HTTP: Partial<Record<ErrorCode, number>> = {

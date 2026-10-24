@@ -1,6 +1,6 @@
 // AI-3 核价 / 确认闸门 / 下单 / 订单状态。
 // 规则：价格只来自 calculate-price；订单只来自 create-order；授权只来自用户明确操作。
-import { randomUUID } from "node:crypto";
+import { randomUUID } from "@/lib/ids";
 import type { CheckoutSnapshot, Order, OrderAttempt, OrderAuthorization, Quote } from "@/contracts";
 import { AppError } from "@/server/errors";
 import { McpNotSentError, McpOutcomeUnknownError, type ToolRegistry } from "@/server/mcp/transport";

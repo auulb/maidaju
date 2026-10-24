@@ -1,4 +1,5 @@
 import "./style.css";
+import { hasServerApi, installLocalBackend } from "./local-backend";
 import type { Order, OrderAttempt, OrderAuthorization, Quote } from "@/contracts";
 import type { DiningSessionRecord } from "@/modules/ports";
 import type { MemberInput } from "@/modules/intake/session";
@@ -293,4 +294,13 @@ async function restore() {
     state.notice = { type: "info", text: error instanceof ApiError ? "演示数据已失效或服务已重启，请重新建局。" : "暂时无法恢复演示，请检查本地服务。" };
   } finally { state.busy = false; render(); }
 }
-void restore();
+async function bootstrap() {
+  const local = !(await hasServerApi());
+  if (local) installLocalBackend();
+  await restore();
+  if (local) {
+    state.notice = { type: "info", text: "静态演示模式：模拟后端运行在浏览器内，刷新页面后演示数据会重置。" };
+    render();
+  }
+}
+void bootstrap();

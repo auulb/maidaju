@@ -1,5 +1,5 @@
 // MCP 参数构建：首版到店自取，绝不发送 beCode / reservationDate / gmServiceCode / addressId。
-import { createHash } from "node:crypto";
+import { sha256Hex } from "@/lib/sha256";
 import { CheckoutSnapshot, DiningContext, type OrderItem } from "@/contracts";
 import { AppError } from "@/server/errors";
 
@@ -77,7 +77,7 @@ export function canonicalJson(v: unknown): string {
   return JSON.stringify(v);
 }
 
-export const sha256 = (s: string) => createHash("sha256").update(s).digest("hex");
+export const sha256 = (s: string) => sha256Hex(s);
 
 /** 价格相关参数摘要：门店、业务类型、商品、数量、套餐、特调、券、餐具 */
 export function cartHash(s: CheckoutSnapshot): string {

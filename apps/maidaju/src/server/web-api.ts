@@ -1,5 +1,5 @@
 // 本地演示 API：组合 AI-1 / AI-2 / AI-3，仅使用模拟数据，不连接真实 MCP。
-import { randomUUID } from "node:crypto";
+import { randomUUID } from "@/lib/ids";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { IntakeDeps, ReadOnlyTool, ToolCaller } from "@/modules/ports";
 import { MemoryIntakeRepository } from "@/modules/intake/memory-repo";
@@ -73,15 +73,21 @@ const ok = (res: ServerResponse, data: unknown) => send(res, 200, { ok: true, da
 const missing = (message: string) => new AppError("VALIDATION", message, false, { notFound: true });
 
 async function body(req: IncomingMessage): Promise<Record<string, unknown>> {
-  const chunks: Buffer[] = [];
+  const chunks: Uint8Array[] = [];
   let size = 0;
   for await (const chunk of req) {
-    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
-    size += buffer.length;
+    const buffer = typeof chunk === "string" ? new TextEncoder().encode(chunk) : new Uint8Array(chunk);
+    size += buffer.byteLength;
     if (size > 1_000_000) throw new AppError("VALIDATION", "请求内容过大");
     chunks.push(buffer);
   }
-  const raw = Buffer.concat(chunks).toString("utf8");
+  const merged = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    merged.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  const raw = new TextDecoder().decode(merged);
   if (!raw.trim()) return {};
   let parsed: unknown;
   try { parsed = JSON.parse(raw); }
