@@ -73,7 +73,7 @@ describe("B2 候选生成", () => {
     for (const c of r.candidates) {
       expect(c.hardConstraintStatus).toBe("pass");
       expect(c.priceSource).toBe("estimate");
-      expect(c.estimatedTotalFen!).toBeLessThanOrEqual(15000);
+      expect(c.estimatedTotalFen!).toBeLessThanOrEqual(24000);
       expect(Object.values(c.estimatedMemberFen!).reduce((a, b) => a + b, 0)).toBe(c.estimatedTotalFen);
       assertCandidateInvariants(c);
     }
@@ -120,7 +120,7 @@ describe("B2 候选生成", () => {
 
   it("仅有一解：如实输出 1 套，不复制凑数", async () => {
     const { svc } = service();
-    const r = await svc.generate(ctx({ items: [STD_ITEMS[2]!], facts: [fact("MOCK-WRAP", "is_main", true), fact("MOCK-WRAP", "contains_spicy", false), fact("MOCK-WRAP", "is_sugary_drink", false)] }));
+    const r = await svc.generate(ctx({ items: [STD_ITEMS[2]!, STD_ITEMS[5]!], facts: stdFacts() }));
     expect(r.candidates).toHaveLength(1);
     expect(r.message).toContain("只找到 1 套");
   });
@@ -150,9 +150,9 @@ describe("B2 候选生成", () => {
 
   it("个人预算上限参与检查", async () => {
     const { svc } = service();
-    const r = await svc.generate(ctx({ members: sixMembers({ m4: { budgetCapFen: 2000 } }) }));
+    const r = await svc.generate(ctx({ members: sixMembers({ m4: { budgetCapFen: 3000 } }) }));
     for (const c of r.candidates) {
-      expect(c.estimatedMemberFen!.m4!).toBeLessThanOrEqual(2000);
+      expect(c.estimatedMemberFen!.m4!).toBeLessThanOrEqual(3000);
       expect(c.checks.find((x) => x.memberId === "m4" && x.constraint === "member_budget")!.status).toBe("pass");
     }
   });
@@ -234,7 +234,7 @@ describe("B4 手工调整与局部重配", () => {
 
   it("事实变化导致未点名成员违反时，纳入重配并给出具体原因", async () => {
     const { svc } = service();
-    const c = (await svc.generate(ctx())).candidates[0]!;
+    const c = (await svc.generate(ctx({ budgetFen: 16800 }))).candidates[0]!;
     expect(c.trays.m1).toContain("MOCK-WRAP");
     const facts = stdFacts({ "MOCK-WRAP": { contains_spicy: true } });
     const r = await svc.replanAffectedMembers(ctx({ facts }), c.id, 1, []);
@@ -246,8 +246,8 @@ describe("B4 手工调整与局部重配", () => {
 
   it("保留其他成员后剩余预算不够：返回冲突，不擅自调整他人", async () => {
     const { svc } = service();
-    const c = (await svc.generate(ctx({ budgetFen: 11400 }))).candidates[0]!;
-    const r = await svc.replanAffectedMembers(ctx({ budgetFen: 11400, members: sixMembers({ m4: { requiredMainCount: 2 } }) }), c.id, 1, ["m4"]);
+    const c = (await svc.generate(ctx({ budgetFen: 16800 }))).candidates[0]!;
+    const r = await svc.replanAffectedMembers(ctx({ budgetFen: 16800, members: sixMembers({ m4: { requiredMainCount: 2 } }) }), c.id, 1, ["m4"]);
     expect(r.candidate).toBeNull();
     expect(r.conflicts[0]!.kind).toBe("total_budget");
     expect(await svc.getLatestVersion(c.id)).toBe(1);

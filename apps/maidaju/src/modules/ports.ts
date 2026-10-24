@@ -26,6 +26,8 @@ export type DiningSessionRecord = {
   name: string;
   memberCount: number;
   budgetFen: number;
+  beType?: 1 | 2 | 5 | 6;
+  deliveryAddress?: string;
   city: string | null;
   keyword: string | null;
   needTableware: boolean;

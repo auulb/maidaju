@@ -3,6 +3,7 @@
  * 首版到店自取：beType=1, orderType=1；任何请求都不发送 beCode / reservationDate / 地址。
  */
 import { AppError } from "@/server/errors";
+import { demoPricing } from "../planning/pricing";
 import type { DiningContext } from "@/contracts";
 import type { IntakeDeps, ReadOnlyTool } from "../ports";
 import { commitSession, loadSession } from "../intake/session";
@@ -14,7 +15,7 @@ import { MenuSnapshot, PlanningContext, type FactAttribute, type StoreSummary } 
 const FORBIDDEN_KEYS = ["beCode", "reservationDate", "gmServiceCode", "addressId"];
 
 async function callReadOnly(deps: IntakeDeps, tool: ReadOnlyTool, args: Record<string, unknown>) {
-  for (const k of FORBIDDEN_KEYS) if (k in args) throw new AppError("VALIDATION", `首版到店请求不允许字段 ${k}`);
+  for (const k of FORBIDDEN_KEYS) if (deps.tools.mode === "live" && k in args) throw new AppError("VALIDATION", `首版到店请求不允许字段 ${k}`);
   let r;
   try {
     r = await deps.tools.call(tool, args);
@@ -29,7 +30,7 @@ export async function searchStores(deps: IntakeDeps, sessionId: string): Promise
   const s = await loadSession(deps, sessionId);
   if (!s.city || !s.keyword) throw new AppError("NEEDS_USER_INPUT", "请先填写城市和位置关键词，系统不会自动定位");
   if (s.mode !== deps.tools.mode) throw new AppError("MODE_MISMATCH", `点餐局为 ${s.mode} 模式，当前 MCP 为 ${deps.tools.mode}`);
-  const data = await callReadOnly(deps, "queryNearbyStores", { beType: 1, searchType: 2, city: s.city, keyword: s.keyword });
+  const data = await callReadOnly(deps, "queryNearbyStores", { beType: s.mode === "mock" ? s.beType ?? 1 : 1, searchType: 2, city: s.city, keyword: s.keyword });
   const { items, warnings } = normalizeStores(data, s.mode, `stores@${deps.now()}`);
   await deps.repo.saveStoreSearch(sessionId, items);
   return { stores: items, warnings };
@@ -64,7 +65,13 @@ export async function refreshCatalog(deps: IntakeDeps, sessionId: string, expect
   if (s.mode !== deps.tools.mode) throw new AppError("MODE_MISMATCH", `点餐局为 ${s.mode} 模式，当前 MCP 为 ${deps.tools.mode}`);
   if (s.revision !== expectedRevision) throw new AppError("STALE_REVISION", "点餐局已被修改，请刷新后重试");
 
-  const context: DiningContext = { beType: 1, orderType: 1, storeCode: s.selectedStore.storeCode };
+  const beType = s.mode === "mock" ? s.beType ?? 1 : 1;
+  const storeCode = s.selectedStore.storeCode;
+  if ((beType === 2 || beType === 6) && !s.deliveryAddress?.trim()) throw new AppError("NEEDS_USER_INPUT", "请填写演示配送地址");
+  const context: DiningContext = beType === 1 ? { beType, orderType: 1, storeCode }
+    : beType === 5 ? { beType, orderType: 1, storeCode, beCode: `MOCK-BE-${storeCode}` }
+    : beType === 2 ? { beType, orderType: 2, storeCode, beCode: `MOCK-BE-${storeCode}`, addressId: `MOCK-ADDRESS-${s.id}` }
+    : { beType, orderType: 2, storeCode, beCode: `MOCK-BE-${storeCode}`, addressId: `MOCK-ADDRESS-${s.id}`, gmServiceCode: "MOCK-GMS001" };
   const snapshotId = deps.newId();
   const fetchedAt = deps.now();
   const warnings: string[] = [];
@@ -116,14 +123,14 @@ export async function getPlanningContext(deps: IntakeDeps, sessionId: string): P
   if (!s.selectedStore) throw new AppError("NEEDS_USER_INPUT", "尚未选择门店");
   const menu = await deps.repo.getMenuSnapshot(sessionId);
   if (!menu) throw new AppError("NEEDS_USER_INPUT", "尚未获取菜单");
-  if (menu.context.storeCode !== s.selectedStore.storeCode || menu.mode !== s.mode) {
+  if (menu.context.storeCode !== s.selectedStore.storeCode || menu.mode !== s.mode || menu.context.beType !== (s.mode === "mock" ? s.beType ?? 1 : 1)) {
     throw new AppError("MENU_CHANGED", "菜单快照与当前门店/模式不一致，请重新获取");
   }
   const members = (await deps.repo.getMembers(sessionId)).map((m) => MemberRequirement.parse(m));
   if (members.length !== s.memberCount) {
     throw new AppError("NEEDS_USER_INPUT", `已确认成员 ${members.length} 人，点餐局为 ${s.memberCount} 人`);
   }
-  const attrs: FactAttribute[] = ["is_main", ...members.flatMap((m) => m.hardAvoid.map((h) => AVOID_TO_ATTRIBUTE[h]))];
+  const attrs: FactAttribute[] = ["is_main", "is_sugary_drink", ...members.flatMap((m) => m.hardAvoid.map((h) => AVOID_TO_ATTRIBUTE[h]))];
   const facts = deriveFacts(menu, attrs, await deps.repo.getFactConfirmations(sessionId));
   return PlanningContext.parse({
     sessionId,
@@ -135,5 +142,6 @@ export async function getPlanningContext(deps: IntakeDeps, sessionId: string): P
     members,
     menu,
     facts,
+    pricing: s.mode === "mock" ? demoPricing(menu.context.beType) : undefined,
   });
 }

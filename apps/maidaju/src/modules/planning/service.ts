@@ -10,8 +10,11 @@ import type { InvalidationReason, InvalidationSink } from "../ports";
 import { buildOrder, estimate } from "./build";
 import { buildPlanCatalog, memberItemStatus } from "./catalog";
 import { checkCandidate } from "./check";
+import { optimizeFeast } from "./optimize";
+import { planMetrics } from "./metrics";
+import { priceCart } from "./pricing";
 import type { CandidateRepository } from "./repo";
-import { beam, enumerateTrays, memberPool, searchCandidates, type Draft, type Tray } from "./search";
+import { beam, enumerateTrays, memberPool, type Draft, type Tray } from "./search";
 import {
   DEFAULT_SEARCH,
   PROFILE_LABEL,
@@ -72,7 +75,7 @@ export class PlanningService implements SnapshotSource, InvalidationSink {
     const catalog = new Map(items.map((i) => [i.code, i]));
     const memberOrder = ctx.members.map((m) => m.memberId);
     const { items: orderItems, assignments } = buildOrder(draft.trays, draft.shared, memberOrder, catalog);
-    const est = estimate(orderItems, assignments, memberOrder, catalog);
+    const est = estimate(orderItems, assignments, memberOrder, catalog, ctx.pricing);
     const { checks, status, unresolvedFactIds } = checkCandidate({
       members: ctx.members,
       items: orderItems,
@@ -107,6 +110,8 @@ export class PlanningService implements SnapshotSource, InvalidationSink {
       estimatedTotalFen: est.totalFen,
       estimatedMemberFen: est.memberFen,
       priceSource: est.totalFen == null ? "unknown" : "estimate",
+      metrics: planMetrics(draft.trays, draft.shared, catalog),
+      pricing: orderItems.every((i) => catalog.get(i.productCode)?.priceFen != null) ? priceCart(orderItems.map((i) => ({ code: i.productCode, unitFen: catalog.get(i.productCode)!.priceFen!, quantity: i.quantity })), ctx.pricing) : null,
       status: "active",
       staleReason: null,
       search: meta.search,
@@ -117,7 +122,7 @@ export class PlanningService implements SnapshotSource, InvalidationSink {
 
   // ---------- B2 生成 ----------
   async generate(ctx: PlanningContext): Promise<GenerateResult> {
-    const out = searchCandidates(ctx, this.opts(), this.d.clockMs);
+    const out = optimizeFeast(ctx, this.opts(), this.d.clockMs);
     // 生成新一批时，本局旧的活跃候选全部被替代
     for (const c of await this.d.repo.listBySession(ctx.sessionId)) {
       if (c.status === "active") await this.d.repo.setStatus(c.id, c.version, "superseded", "已重新生成候选");

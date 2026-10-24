@@ -78,9 +78,14 @@ export function enumerateTrays(m: MemberRequirement, pool: MemberPool, opts: Sea
   const k = m.requiredMainCount;
   const { out: mainSets, truncated: t1 } = multisets(pool.mains, k, 500);
   const raw: PlanItem[][] = [];
+  const drinks = pool.addons.filter((p) => p.roles.drink > 0);
+  const sides = pool.addons.filter((p) => p.roles.drink === 0);
   for (const ms of mainSets) {
-    raw.push(ms);
-    for (const a of pool.addons) raw.push([...ms, a]);
+    const meals = ms.some((p) => p.roles.drink > 0) ? [ms] : drinks.map((d) => [...ms, d]);
+    for (const meal of meals) {
+      raw.push(meal);
+      for (const a of sides) raw.push([...meal, a]);
+    }
   }
   const trays: Tray[] = raw.map((xs) => {
     let hard: Tri = "pass";

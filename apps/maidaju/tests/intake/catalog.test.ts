@@ -25,9 +25,9 @@ describe("点餐局与成员", () => {
     expect(s.budgetFen).toBe(15000);
   });
 
-  it("人数超出 6—20 被拒绝", async () => {
+  it("人数超出 1—20 被拒绝", async () => {
     const { deps } = makeDeps();
-    await expect(createSession(deps, { ...base, memberCount: 5 })).rejects.toMatchObject({ code: "VALIDATION" });
+    await expect(createSession(deps, { ...base, memberCount: 0 })).rejects.toMatchObject({ code: "VALIDATION" });
   });
 
   it("旧 revision 写入返回 409", async () => {

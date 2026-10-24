@@ -3,7 +3,7 @@ import { z } from "zod";
 import { Fen } from "@/contracts";
 
 /** 首版可识别的硬约束标签；其他要求只能进入 softPrefer 或问题 */
-export const HardAvoid = z.enum(["spicy", "sugary_drink", "beef", "pork", "seafood"]);
+export const HardAvoid = z.enum(["spicy", "sugary_drink", "beef", "pork", "seafood", "meat"]);
 export type HardAvoid = z.infer<typeof HardAvoid>;
 
 export const HARD_AVOID_LABEL: Record<HardAvoid, string> = {
@@ -12,6 +12,7 @@ export const HARD_AVOID_LABEL: Record<HardAvoid, string> = {
   beef: "不吃牛肉",
   pork: "不吃猪肉",
   seafood: "不吃海鲜",
+  meat: "素食（蛋奶可）",
 };
 
 export const MemberRequirement = z

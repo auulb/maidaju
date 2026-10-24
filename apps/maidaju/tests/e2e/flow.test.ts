@@ -48,7 +48,7 @@ const FACTS: Record<string, Partial<Record<FactAttribute, boolean>>> = {
   "MOCK-COMBO": { is_main: false, contains_spicy: true, is_sugary_drink: true },
 };
 
-async function readySession(env: Awaited<ReturnType<typeof setup>>, budgetYuan = "150") {
+async function readySession(env: Awaited<ReturnType<typeof setup>>, budgetYuan = "240") {
   const { deps } = env;
   let s = await createSession(deps, { mode: "mock", name: "周五团建", memberCount: 6, budget: { kind: "total", yuan: budgetYuan }, city: "上海市", keyword: "人民广场" });
   s = (await saveMembers(deps, s.id, sixMembers(), s.revision)).session;
@@ -64,7 +64,7 @@ async function readySession(env: Awaited<ReturnType<typeof setup>>, budgetYuan =
   return s;
 }
 
-describe("E2E 首个验收场景（MOCK）：6 人 / 150 元 / 2 人不吃辣 / 1 人不喝含糖饮料", () => {
+describe("E2E 首个验收场景（MOCK）：6 人 / 240 元 / 2 人不吃辣 / 1 人不喝含糖饮料", () => {
   it("需求 → 候选 → 核价 → 授权 → 下单 → 查单", async () => {
     const env = await setup();
     const { deps, planning, checkout, transport } = env;
@@ -81,7 +81,7 @@ describe("E2E 首个验收场景（MOCK）：6 人 / 150 元 / 2 人不吃辣 / 
 
     const q = await checkout.quote(c.id, c.version);
     expect(q.status).toBe("verified");
-    expect(q.payableFen).toBeLessThanOrEqual(15000);
+    expect(q.payableFen).toBeLessThanOrEqual(24000);
     expect(q.budgetOk).toBe("pass");
 
     const auth = await checkout.authorize({ quoteId: q.id, takeWayCode: q.takeWayOptions[0]!.code, acknowledgedFactIds: [], organizerId: "organizer", userConfirmed: true });
@@ -107,7 +107,7 @@ describe("E2E 首个验收场景（MOCK）：6 人 / 150 元 / 2 人不吃辣 / 
     const c = (await planning.generate(await getPlanningContext(deps, s.id))).candidates[0]!;
     const q = await checkout.quote(c.id, c.version);
 
-    await updateSession(deps, s.id, { budget: { kind: "total", yuan: "160" } }, s.revision);
+    await updateSession(deps, s.id, { budget: { kind: "total", yuan: "260" } }, s.revision);
     expect(env.reasons).toContain("session_changed");
     expect(await planning.getCheckoutSnapshot(c.id, c.version)).toBeNull();
     await expect(

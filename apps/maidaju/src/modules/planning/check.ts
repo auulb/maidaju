@@ -53,7 +53,7 @@ export function checkCandidate(input: CheckInput): CheckResult {
     for (const a of own) {
       const p = input.catalog.get(codeOf.get(a.lineId) ?? "");
       if (!p) continue;
-      if (p.main.status === "yes") yes += a.quantity;
+      if (p.main.status === "yes") yes += p.roles.main * a.quantity;
       else if (p.main.status === "unknown") {
         unknown += a.quantity;
         mainFacts.push(...p.main.factIds);
@@ -73,6 +73,9 @@ export function checkCandidate(input: CheckInput): CheckResult {
             ? `已分配 ${yes} 份已核实主食、${unknown} 份主食属性待确认（要求 ${need}）`
             : `独享主食 ${yes + unknown} 份，少于要求 ${need} 份`,
     });
+
+    const drinks = own.reduce((n, a) => n + (input.catalog.get(codeOf.get(a.lineId) ?? "")?.roles.drink ?? 0) * a.quantity, 0);
+    add({ memberId: m.memberId, constraint: "required_drink", status: drinks >= 1 ? "pass" : "fail", factIds: [], reason: `已分配 ${drinks} 份饮品（每人至少 1 份）` });
 
     // 不能接受项：独享与共享都要检查
     for (const h of m.hardAvoid) {

@@ -3,6 +3,7 @@
 import type { Assignment, Fen, OrderItem } from "@/contracts";
 import { largestRemainder } from "../checkout/allocation";
 import type { PlanItem, SharedPick } from "./types";
+import { priceCart, type PricingModel } from "./pricing";
 
 export const lineIdOf = (code: string) => `L:${code}`;
 
@@ -44,6 +45,7 @@ export function estimate(
   assignments: Assignment[],
   memberOrder: string[],
   catalog: Map<string, PlanItem>,
+  pricing?: PricingModel,
 ): { totalFen: Fen | null; memberFen: Record<string, Fen> | null } {
   let total = 0;
   for (const i of items) {
@@ -57,6 +59,12 @@ export function estimate(
     const amount = catalog.get(code)!.priceFen! * a.quantity;
     const split = largestRemainder(amount, memberOrder.filter((m) => a.memberIds.includes(m)).map((m) => [m, 1]));
     for (const [m, v] of Object.entries(split ?? {})) member[m] = (member[m] ?? 0) + v;
+  }
+  if (pricing) {
+    const priced = priceCart(items.map((i) => ({ code: i.productCode, unitFen: catalog.get(i.productCode)!.priceFen!, quantity: i.quantity })), pricing);
+    // 与核价一致：整单优惠/费用按原价分摊权重重分配，最大余数处理尾差。
+    const allocated = largestRemainder(priced.payableFen, memberOrder.map((id) => [id, member[id] ?? 0]));
+    return { totalFen: priced.payableFen, memberFen: allocated };
   }
   return { totalFen: total, memberFen: member };
 }

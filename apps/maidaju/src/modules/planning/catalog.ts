@@ -73,10 +73,28 @@ export function buildPlanCatalog(ctx: PlanningContext): { items: PlanItem[]; fac
       avoid[a] = s;
     }
     const main = mainStatus(idx, it.code, it.category);
+    const components = componentCodes.map((code) => ctx.menu.items.find((p) => p.code === code)?.nutrition);
+    const componentNutrition = isCombo && components.length > 0 && components.every((n) => n != null)
+      ? { kcal: 0, protein: 0, fat: 0, carb: 0, sodium: 0, estimated: components.some((n) => n!.estimated), source: "默认套餐组件营养相加" } : null;
+    if (componentNutrition) for (const n of components) for (const key of ["kcal", "protein", "fat", "carb", "sodium"] as const) componentNutrition[key] += n![key];
     return {
       code: it.code,
       name: it.name,
       priceFen: it.priceFen,
+      category: it.category,
+      nutrition: componentNutrition ?? it.nutrition ?? {
+        kcal: main.status !== "no" ? 380 : it.category === "drink" ? 100 : 180,
+        protein: main.status !== "no" ? 18 : 2, fat: main.status !== "no" ? 15 : 4,
+        carb: main.status !== "no" ? 38 : 25, sodium: main.status !== "no" ? 800 : 100,
+        estimated: true, source: "同类餐品估算，非官方数据",
+      },
+      roles: {
+        main: main.status !== "no" ? Math.max(1, componentCodes.filter((c) => mainStatus(idx, c, ctx.menu.items.find((i) => i.code === c)?.category ?? "unknown").status === "yes").length) : 0,
+        drink: it.category === "drink" ? 1 : componentCodes.filter((c) => ctx.menu.items.find((i) => i.code === c)?.category === "drink").length,
+        side: it.category === "side" ? 1 : componentCodes.filter((c) => ctx.menu.items.find((i) => i.code === c)?.category === "side").length,
+        dessert: it.category === "dessert" ? 1 : componentCodes.filter((c) => ctx.menu.items.find((i) => i.code === c)?.category === "dessert").length,
+      },
+      sugarFree: avoidStatus(idx, it.code, "is_sugary_drink").status === "pass" && componentCodes.every((c) => avoidStatus(idx, c, "is_sugary_drink").status === "pass"),
       main,
       addon: main.status === "no",
       roundList: combo.roundList,

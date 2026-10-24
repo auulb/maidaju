@@ -5,7 +5,7 @@ import type { DiningSessionRecord, IntakeDeps } from "../ports";
 import { yuanToFen } from "./money";
 import { MemberRequirement } from "./types";
 
-export const MIN_MEMBERS = 6;
+export const MIN_MEMBERS = 1;
 export const MAX_MEMBERS = 20;
 
 const Yuan = z.union([z.string(), z.number()]);
@@ -25,6 +25,8 @@ export const CreateSessionInput = z.object({
   city: OptText(20).default(null),
   keyword: OptText(50).default(null),
   needTableware: z.boolean().default(false),
+  beType: z.union([z.literal(1), z.literal(2), z.literal(5), z.literal(6)]).default(1),
+  deliveryAddress: z.string().trim().max(120).default(""),
 });
 export type CreateSessionInput = z.input<typeof CreateSessionInput>;
 
@@ -51,6 +53,7 @@ export async function createSession(deps: IntakeDeps, input: CreateSessionInput)
     name: p.name,
     memberCount: p.memberCount,
     budgetFen: budgetToFen(p.budget, p.memberCount),
+    beType: p.beType, deliveryAddress: p.deliveryAddress,
     city: p.city,
     keyword: p.keyword,
     needTableware: p.needTableware,
@@ -102,6 +105,8 @@ export async function updateSession(
   if (p.city !== undefined) patch.city = p.city;
   if (p.keyword !== undefined) patch.keyword = p.keyword;
   if (p.needTableware !== undefined) patch.needTableware = p.needTableware;
+  if (p.beType !== undefined) patch.beType = p.beType;
+  if (p.deliveryAddress !== undefined) patch.deliveryAddress = p.deliveryAddress;
 
   const saved = await commitSession(deps, current, patch, expectedRevision);
   await deps.invalidation.invalidate(id, "session_changed", saved.revision);

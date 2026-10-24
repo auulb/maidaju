@@ -1,4 +1,4 @@
-// MCP 参数构建：首版到店自取，绝不发送 beCode / reservationDate / gmServiceCode / addressId。
+// MCP 参数构建：按业务类型带条件字段；到店自取不传 beCode，外送带地址。
 import { sha256Hex } from "@/lib/sha256";
 import { CheckoutSnapshot, DiningContext, type OrderItem } from "@/contracts";
 import { AppError } from "@/server/errors";
@@ -20,20 +20,21 @@ export function toMcpItems(items: OrderItem[]) {
 }
 
 function baseArgs(ctx: DiningContext) {
-  const c = DiningContext.parse(ctx); // strict：多余字段（如 beCode）直接报错
-  return { storeCode: c.storeCode, orderType: c.orderType, beType: c.beType };
+  const c = DiningContext.parse(ctx); // 每种业务类型独立 strict 校验
+  return { storeCode: c.storeCode, orderType: c.orderType, beType: c.beType,
+    ...("beCode" in c ? { beCode: c.beCode } : {}), ...("gmServiceCode" in c ? { gmServiceCode: c.gmServiceCode } : {}) };
 }
 
 export function buildPriceArgs(s: CheckoutSnapshot) {
   const args = { ...baseArgs(s.context), items: toMcpItems(s.items), needTableware: s.needTableware };
-  assertNoForbidden(args);
+  if (s.context.beType === 1) assertNoForbidden(args);
   return args;
 }
 
 export function buildCreateOrderArgs(s: CheckoutSnapshot, takeWayCode: string) {
-  if (!takeWayCode) throw new AppError("NEEDS_USER_INPUT", "到店订单必须选择取餐方式");
-  const args = { ...buildPriceArgs(s), takeWayCode };
-  assertNoForbidden(args);
+  if (s.context.orderType === 1 && !takeWayCode) throw new AppError("NEEDS_USER_INPUT", "到店订单必须选择取餐方式");
+  const args = { ...buildPriceArgs(s), ...(s.context.orderType === 1 ? { takeWayCode } : { addressId: "addressId" in s.context ? s.context.addressId : "" }) };
+  if (s.context.beType === 1) assertNoForbidden(args);
   return args;
 }
 
@@ -81,7 +82,7 @@ export const sha256 = (s: string) => sha256Hex(s);
 
 /** 价格相关参数摘要：门店、业务类型、商品、数量、套餐、特调、券、餐具 */
 export function cartHash(s: CheckoutSnapshot): string {
-  return sha256(canonicalJson({ mode: s.mode, ...buildPriceArgs(s) }));
+  return sha256(canonicalJson({ mode: s.mode, context: s.context, ...buildPriceArgs(s) }));
 }
 
 /** 确认摘要：在 cartHash 基础上纳入需求 revision、分配与已接受未知项 */

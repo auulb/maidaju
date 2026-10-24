@@ -8,14 +8,14 @@ export type Fen = z.infer<typeof Fen>;
 export const AppMode = z.enum(["mock", "live"]);
 export type AppMode = z.infer<typeof AppMode>;
 
-/** 首版仅到店自取：beType=1 / orderType=1，对象内不允许出现 beCode */
-export const DiningContext = z
-  .object({
-    beType: z.literal(1),
-    orderType: z.literal(1),
-    storeCode: z.string().regex(/^\d+$/, "storeCode 必须全为数字"),
-  })
-  .strict();
+/** 按业务模式校验参数：到店不带 beCode，得来速/外送必须有配对业务编码。 */
+const StoreCode = z.string().regex(/^\d+$/, "storeCode 必须全为数字");
+export const DiningContext = z.discriminatedUnion("beType", [
+  z.object({ beType: z.literal(1), orderType: z.literal(1), storeCode: StoreCode }).strict(),
+  z.object({ beType: z.literal(5), orderType: z.literal(1), storeCode: StoreCode, beCode: z.string().min(1) }).strict(),
+  z.object({ beType: z.literal(2), orderType: z.literal(2), storeCode: StoreCode, beCode: z.string().min(1), addressId: z.string().min(1) }).strict(),
+  z.object({ beType: z.literal(6), orderType: z.literal(2), storeCode: StoreCode, beCode: z.string().min(1), addressId: z.string().min(1), gmServiceCode: z.string().min(1) }).strict(),
+]);
 export type DiningContext = z.infer<typeof DiningContext>;
 
 export const ModificationValue = z

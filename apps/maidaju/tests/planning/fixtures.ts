@@ -93,7 +93,7 @@ export function ctx(p: { members?: MemberRequirement[]; items?: ItemSpec[]; fact
     sessionId: "S1",
     sessionRevision: p.revision ?? 1,
     mode: "mock",
-    totalBudgetFen: p.budgetFen ?? 15000,
+    totalBudgetFen: p.budgetFen ?? 24000,
     memberCount: members.length,
     needTableware: false,
     members,

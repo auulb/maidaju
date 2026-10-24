@@ -2,6 +2,7 @@
 import { z } from "zod";
 import { AppMode, DiningContext, Fen } from "@/contracts";
 import { MemberRequirement } from "../intake/types";
+import { PricingModel } from "../planning/pricing";
 
 export const StoreSummary = z.object({
   storeCode: z.string().regex(/^\d+$/),
@@ -16,12 +17,20 @@ export type StoreSummary = z.infer<typeof StoreSummary>;
 export const ItemCategory = z.enum(["main", "side", "drink", "dessert", "combo", "unknown"]);
 export type ItemCategory = z.infer<typeof ItemCategory>;
 
+export const Nutrition = z.object({
+  kcal: z.number().nonnegative(), protein: z.number().nonnegative(), fat: z.number().nonnegative(),
+  carb: z.number().nonnegative(), sodium: z.number().nonnegative(),
+  estimated: z.boolean(), source: z.string(),
+});
+export type Nutrition = z.infer<typeof Nutrition>;
+
 export const CatalogItem = z.object({
   code: z.string().min(1),
   name: z.string(),
   /** 只有单位可核实时才填写；否则 null，绝不填 0 */
   priceFen: Fen.nullable(),
   priceRaw: z.unknown(),
+  nutrition: Nutrition.optional(),
   supportModify: z.boolean().nullable(),
   /** 工具返回的分类名原文；不从商品名推断 */
   toolCategoryName: z.string().nullable(),
@@ -81,6 +90,7 @@ export const FactAttribute = z.enum([
   "contains_beef",
   "contains_pork",
   "contains_seafood",
+  "contains_meat",
 ]);
 export type FactAttribute = z.infer<typeof FactAttribute>;
 
@@ -104,10 +114,11 @@ export const PlanningContext = z.object({
   sessionRevision: z.number().int(),
   mode: AppMode,
   totalBudgetFen: Fen,
-  memberCount: z.number().int().min(6).max(20),
+  memberCount: z.number().int().min(1).max(20),
   needTableware: z.boolean(),
   members: z.array(MemberRequirement),
   menu: MenuSnapshot,
   facts: z.array(Fact),
+  pricing: PricingModel.optional(),
 });
 export type PlanningContext = z.infer<typeof PlanningContext>;

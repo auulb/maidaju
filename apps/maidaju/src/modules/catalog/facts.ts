@@ -15,6 +15,7 @@ export const AVOID_TO_ATTRIBUTE: Record<HardAvoid, FactAttribute> = {
   beef: "contains_beef",
   pork: "contains_pork",
   seafood: "contains_seafood",
+  meat: "contains_meat",
 };
 
 const factId = (snapshotId: string, subjectId: string, attr: FactAttribute) => `${snapshotId}:${subjectId}:${attr}`;

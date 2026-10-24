@@ -5,7 +5,7 @@
  * - 无法识别的结构返回空列表并附带 warnings，由调用方展示，不伪造数据。
  */
 import type { AppMode } from "@/contracts";
-import type { CatalogItem, ItemCategory, MealDetail, StoreCoupon, StoreSummary } from "./types";
+import { Nutrition, type CatalogItem, type ItemCategory, type MealDetail, type StoreCoupon, type StoreSummary } from "./types";
 
 type Obj = Record<string, unknown>;
 const isObj = (v: unknown): v is Obj => typeof v === "object" && v !== null && !Array.isArray(v);
@@ -68,7 +68,7 @@ export function normalizeStores(data: unknown, mode: AppMode, snapshotRef: strin
 /** 仅当工具返回明确的类型字段时才映射；分类名文字不参与推断 */
 function categoryFromTool(o: Obj): ItemCategory {
   const t = str(first(o, ["productType", "type"]));
-  return t === "combo" ? "combo" : "unknown";
+  return t && ["main", "side", "drink", "dessert", "combo"].includes(t) ? t as ItemCategory : "unknown";
 }
 
 export type PriceUnit = "fen" | "yuan" | null;
@@ -90,12 +90,14 @@ export function normalizeMeals(data: unknown, snapshotRef: string, priceUnit: Pr
   for (const h of hits) {
     const code = str(first(h.obj, ["code", "productCode"]))!;
     if (byCode.has(code)) continue;
-    const priceRaw = first(h.obj, ["price", "currentPrice", "salePrice"]) ?? null;
+    const cardRequired = h.obj.card_required === true || String(h.obj.discountType ?? "").includes("随单购");
+    const priceRaw = (cardRequired ? h.obj.originalPrice : first(h.obj, ["price", "currentPrice", "salePrice"])) ?? null;
     byCode.set(code, {
       code,
       name: str(first(h.obj, ["name", "productName"]))!,
       priceFen: priceToFen(priceRaw, priceUnit),
       priceRaw,
+      nutrition: Nutrition.safeParse(h.obj.nutrition).success ? Nutrition.parse(h.obj.nutrition) : undefined,
       supportModify: bool(h.obj.supportModify),
       toolCategoryName: h.parentName,
       category: categoryFromTool(h.obj),

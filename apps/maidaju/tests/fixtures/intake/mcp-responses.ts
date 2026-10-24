@@ -22,8 +22,8 @@ export const MOCK_MEALS = {
       {
         categoryName: "饮料",
         meals: [
-          { code: "MOCK-COLA", name: "模拟可乐", price: 900 },
-          { code: "MOCK-ZERO", name: "模拟无糖可乐", price: 900 },
+          { code: "MOCK-COLA", name: "模拟可乐", price: 900, productType: "drink" },
+          { code: "MOCK-ZERO", name: "模拟无糖可乐", price: 900, productType: "drink" },
         ],
       },
       { categoryName: "套餐", meals: [{ code: "MOCK-COMBO", name: "模拟双人餐", price: 5900, productType: "combo" }] },

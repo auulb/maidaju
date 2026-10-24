@@ -1,6 +1,8 @@
 // AI-2 逐人餐盘与候选规划 DTO。
 // 跨模块传输对象（OrderItem / Assignment / ConstraintCheck / CheckoutSnapshot）来自 @/contracts（AI-3 维护）。
 import type { AppMode, Assignment, ConstraintCheck, DiningContext, Fen, OrderItem } from "@/contracts";
+import type { ItemCategory, Nutrition } from "../catalog/types";
+import type { PriceBreakdown } from "./pricing";
 
 export type Tri = "pass" | "pending" | "fail";
 
@@ -12,6 +14,10 @@ export type PlanItem = {
   code: string;
   name: string;
   priceFen: Fen | null;
+  category: ItemCategory;
+  nutrition: Nutrition;
+  roles: { main: number; drink: number; side: number; dessert: number };
+  sugarFree: boolean;
   main: { status: MainStatus; factIds: string[]; sourceRef: string | null };
   /** 可作为加购/共享的非主食（工具分类或可靠事实表明非主食） */
   addon: boolean;
@@ -25,9 +31,12 @@ export type PlanItem = {
 
 export type SharedPick = { code: string; quantity: number; memberIds: string[] };
 
-export type CandidateProfile = "budget" | "preference" | "sharing" | "manual" | "replan";
+export type CandidateProfile = "budget" | "preference" | "sharing" | "variety" | "fitness" | "energy" | "manual" | "replan";
 
 export const PROFILE_LABEL: Record<CandidateProfile, string> = {
+  variety: "多元体验",
+  fitness: "健身活力",
+  energy: "能量满格",
   budget: "简洁省钱",
   preference: "偏好覆盖",
   sharing: "适度共享",
@@ -70,12 +79,21 @@ export type Candidate = {
   estimatedTotalFen: Fen | null;
   estimatedMemberFen: Record<string, Fen> | null;
   priceSource: "estimate" | "unknown";
+  metrics: PlanMetrics;
+  pricing: PriceBreakdown | null;
   status: "active" | "superseded" | "stale";
   staleReason: string | null;
   search: SearchStats | null;
   /** 局部重配/手工调整相对上一版本的变动说明 */
   changes: { memberId: string | null; reason: string }[];
   createdAt: string;
+};
+
+export type PlanMetrics = {
+  kcal: number; protein: number; fat: number; carb: number; sodium: number;
+  distinct: number; quantity: number; sugarFreeDrinks: number;
+  roles: { main: number; drink: number; side: number; dessert: number };
+  estimated: boolean;
 };
 
 export type Conflict = {

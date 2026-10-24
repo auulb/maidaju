@@ -14,7 +14,7 @@ import { CheckoutService } from "@/modules/checkout/service";
 import { MockMcpTransport } from "@/server/mcp/mock";
 import { ToolRegistry, type ToolResult } from "@/server/mcp/transport";
 import { AppError } from "@/server/errors";
-import { DEMO_FACTS, DEMO_MEALS, DEMO_STORES, demoDetail } from "./mcp/demo-data";
+import { DEMO_FACTS, DEMO_MEALS, DEMO_STORES, DEMO_PRODUCTS, demoDetail } from "./mcp/demo-data";
 
 class DemoTools implements ToolCaller {
   readonly mode = "mock" as const;
@@ -106,7 +106,7 @@ function integer(value: unknown, name: string): number {
 function defaultMembers(count: number): MemberInput[] {
   return Array.from({ length: count }, (_, i) => ({
     memberId: `m${i + 1}`, alias: `成员${i + 1}`, requiredMainCount: 1,
-    hardAvoid: i < 2 ? ["spicy"] : i === 2 ? ["sugary_drink"] : [],
+    hardAvoid: [],
     softPrefer: [], budgetCapFen: null,
   }));
 }
@@ -163,6 +163,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse) {
         budget: { kind: "total", yuan: String(p.budgetYuan ?? "150") },
         city: String(p.city ?? "上海市"), keyword: String(p.keyword ?? "人民广场"),
         needTableware: p.needTableware === true,
+        beType: (p.beType ?? 1) as 1 | 2 | 5 | 6, deliveryAddress: String(p.deliveryAddress ?? ""),
       });
       await saveMembers(e.deps, session.id, (p.members ?? defaultMembers(count)) as MemberInput[], session.revision);
       return ok(res, await payload(e, session.id));
@@ -182,6 +183,8 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse) {
         budget: { kind: "total", yuan: String(p.budgetYuan ?? session.budgetFen / 100) },
         city: String(p.city ?? session.city ?? ""), keyword: String(p.keyword ?? session.keyword ?? ""),
         needTableware: p.needTableware === undefined ? session.needTableware : p.needTableware === true,
+        beType: (p.beType ?? session.beType ?? 1) as 1 | 2 | 5 | 6,
+        deliveryAddress: String(p.deliveryAddress ?? session.deliveryAddress ?? ""),
       }, integer(p.revision, "版本号"));
       if (nextCount !== session.memberCount) {
         const previous = await d.repo.getMembers(sessionId);
@@ -193,8 +196,10 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse) {
         });
         await saveMembers(d, sessionId, members, updated.revision);
       }
-      if (updated.city !== session.city || updated.keyword !== session.keyword) {
+      if (updated.city !== session.city || updated.keyword !== session.keyword || updated.beType !== session.beType || updated.deliveryAddress !== session.deliveryAddress) {
         await d.repo.saveStoreSearch(sessionId, []);
+        await d.repo.saveMenuSnapshot(sessionId, null);
+        await d.repo.replaceFactConfirmations(sessionId, []);
       }
       return ok(res, await payload(e, sessionId));
     }
@@ -211,7 +216,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse) {
       return ok(res, await payload(e, sessionId));
     }
     if (req.method === "POST" && action === "catalog") {
-      const result = await refreshCatalog(d, sessionId, integer(p.revision, "版本号"), { priceUnit: "fen", detailCodes: ["MOCK-COMBO"] });
+      const result = await refreshCatalog(d, sessionId, integer(p.revision, "版本号"), { priceUnit: "fen", detailCodes: DEMO_PRODUCTS.filter((p) => p.category === "combo").map((p) => p.code) });
       return ok(res, { ...(await payload(e, sessionId)), warnings: result.warnings });
     }
     if (req.method === "POST" && action === "facts/confirm-all") {
@@ -221,7 +226,18 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse) {
       return ok(res, { ...(await payload(e, sessionId)), confirmed });
     }
     if (req.method === "POST" && action === "candidates") {
-      const result = await e.planning.generate(await getPlanningContext(d, sessionId));
+      // 演示目录的属性是预设数据，直接带来源提供给求解器，无需顾客逐项确认机器内部事实。
+      const context = await getPlanningContext(d, sessionId);
+      const existing = new Map(context.facts.map((f) => [`${f.subjectId}:${f.attribute}`, f]));
+      for (const item of context.menu.items) for (const [attribute, value] of Object.entries(DEMO_FACTS[item.code] ?? {})) {
+        const key = `${item.code}:${attribute}`;
+        if (existing.get(key)?.status === "user_confirmed") continue;
+        existing.set(key, { id: `${context.menu.id}:${key}`, subjectId: item.code, attribute: attribute as FactAttribute, value,
+          status: "tool_supported", sourceRef: "本地演示目录预设属性（非真实门店认证）", confirmedBy: null, basis: "演示数据",
+          menuSnapshotId: context.menu.id, observedAt: context.menu.fetchedAt });
+      }
+      context.facts = [...existing.values()];
+      const result = await e.planning.generate(context);
       return ok(res, { ...(await payload(e, sessionId)), result });
     }
     if (req.method === "POST" && action === "quote") {

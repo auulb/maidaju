@@ -1,0 +1,24 @@
+{
+  "note": "Non-official, best-effort estimates for items that appear on the current menu but are missing from both official sources. Every entry is used only as a fallback and is flagged as estimated in the plan.",
+  "source": "manual estimate (skill)",
+  "entries": [
+    {"name": "可乐麦炫酷", "kcal": 205, "protein_g": 1, "fat_g": 3, "carb_g": 42, "sodium_mg": 45},
+    {"name": "雪碧麦炫酷", "kcal": 195, "protein_g": 1, "fat_g": 3, "carb_g": 40, "sodium_mg": 40},
+    {"name": "无糖可乐麦炫酷", "kcal": 95, "protein_g": 1, "fat_g": 3, "carb_g": 5, "sodium_mg": 40},
+    {"name": "怡泉+C麦炫酷", "kcal": 200, "protein_g": 1, "fat_g": 3, "carb_g": 42, "sodium_mg": 30},
+    {"name": "香草风味奶昔", "kcal": 340, "protein_g": 9, "fat_g": 9, "carb_g": 55, "sodium_mg": 200},
+    {"name": "草莓风味奶昔", "kcal": 330, "protein_g": 9, "fat_g": 9, "carb_g": 53, "sodium_mg": 190},
+    {"name": "龙焰鸡腿堡", "kcal": 560, "protein_g": 26, "fat_g": 30, "carb_g": 44, "sodium_mg": 1100},
+    {"name": "龙焰芝士棒鸡腿堡", "kcal": 640, "protein_g": 33, "fat_g": 35, "carb_g": 47, "sodium_mg": 1250},
+    {"name": "双层脆鸡堡", "kcal": 600, "protein_g": 28, "fat_g": 32, "carb_g": 48, "sodium_mg": 1150},
+    {"name": "Hold不住鸡排堡（椒盐风味）", "kcal": 500, "protein_g": 25, "fat_g": 22, "carb_g": 48, "sodium_mg": 1100},
+    {"name": "高达吉士双牛堡", "kcal": 545, "protein_g": 29, "fat_g": 31, "carb_g": 36, "sodium_mg": 1150},
+    {"name": "5块心形薯饼", "kcal": 450, "protein_g": 5, "fat_g": 26, "carb_g": 48, "sodium_mg": 620},
+    {"name": "8块心形薯饼", "kcal": 720, "protein_g": 8, "fat_g": 42, "carb_g": 77, "sodium_mg": 990},
+    {"name": "灰焰圆筒", "kcal": 100, "protein_g": 2, "fat_g": 3, "carb_g": 15, "sodium_mg": 40},
+    {"name": "马苏里拉拉丝芝士条", "kcal": 220, "protein_g": 9, "fat_g": 12, "carb_g": 18, "sodium_mg": 480},
+    {"name": "蓝莓爆爆珠麦旋风", "kcal": 300, "protein_g": 5, "fat_g": 9, "carb_g": 48, "sodium_mg": 120},
+    {"name": "泷愿成真麦旋风——大米风味", "kcal": 295, "protein_g": 5, "fat_g": 9, "carb_g": 47, "sodium_mg": 120},
+    {"name": "马来咖喱风味薄皮肉骨鸡3块", "kcal": 420, "protein_g": 22, "fat_g": 24, "carb_g": 22, "sodium_mg": 780}
+  ]
+}
